@@ -10,6 +10,7 @@ import {
 } from 'youtube-transcript-plus';
 import { AppError } from '@/lib/errors';
 import type { TranscriptResult } from './types';
+import { fetchSupadataTranscript } from './supadata-client';
 
 const USER_AGENT = process.env.TRANSCRIPT_USER_AGENT || undefined;
 const MAX_DURATION_SECONDS = Number(
@@ -87,6 +88,9 @@ export async function fetchVideoTranscript(
   videoId: string,
   requestedLang: string,
 ): Promise<TranscriptResult> {
+  if (process.env.SUPADATA_API_KEY?.trim() || process.env.VERCEL === '1') {
+    return fetchSupadataTranscript(videoId, requestedLang);
+  }
   try {
     const tracks = await listLanguages(videoId, {
       userAgent: USER_AGENT,

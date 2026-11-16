@@ -61,9 +61,11 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/gloomtype
 IMPORT_RATE_LIMIT_PER_HOUR=10
 IMPORT_MAX_DURATION_SECONDS=3600
 TRANSCRIPT_USER_AGENT=Mozilla/5.0...
-YTDLP_PATH=/usr/local/bin/yt-dlp
-NEXT_PUBLIC_PLAYER_MODE=fake  # or 'youtube' for real IFrame API
+SUPADATA_API_KEY=your-server-only-key
+NEXT_PUBLIC_PLAYER_MODE=youtube  # use 'fake' only for tests
 ```
+
+The default seed imports a real captioned TED video and features it in the library. It needs access to YouTube. For isolated tests, use `pnpm db:seed -- --fixture src/data/fixtures/transcript-sample.json`; that fixture contains synthetic captions and a placeholder video ID, so it cannot play on YouTube.
 
 ## Commands
 
@@ -82,6 +84,35 @@ pnpm db:seed          # Seed database
 pnpm db:studio        # Open Drizzle Studio
 ```
 
+## Hosting on Vercel with Neon
+
+Gloomtype uses the `gloomtype` database in the existing Neon project. The other project's `neondb` database is separate. Vercel functions run in `cle1` (Ohio), next to Neon, and connect through Neon's pooled endpoint as the scoped `gloomtype_app` role. Drizzle migrations use a direct connection as the database owner.
+
+Credentials stay outside Git:
+
+- `.env.local`: local development and test database.
+- `.env.neon.local`: pooled `DATABASE_URL` and direct `DATABASE_URL_UNPOOLED` for the Gloomtype Neon database.
+- Vercel production environment: the scoped, pooled `DATABASE_URL` as a secret, plus player and import settings. The database-owner URL is kept local.
+
+Run migrations before deploying a schema change:
+
+```bash
+pnpm exec dotenv -e .env.neon.local -- tsx src/db/migrate.ts
+pnpm dlx vercel deploy --prod
+```
+
+To seed a new database, run:
+
+```bash
+pnpm exec dotenv -e .env.neon.local -- tsx src/db/seed.ts
+```
+
+The Vercel project is linked through the ignored `.vercel/` directory. On a new checkout, sign in with `pnpm dlx vercel login`, then run `pnpm dlx vercel link`. Configure the production environment before the first deployment. Build artifacts and local environment files are excluded by `.vercelignore`.
+
+Migrations are an explicit step rather than part of the build, so ordinary deployments do not change database structure. The in-memory import rate limit applies per function instance. Cloud imports use Supadata because YouTube blocks direct requests from Vercel. Add `SUPADATA_API_KEY` as a sensitive production environment variable before deploying. Local development uses the same provider when the key is present, and otherwise keeps direct YouTube fetching. The key is never sent to the browser.
+
+Imports fetch metadata first to enforce the video length limit, then request timestamped captions with `mode=native`; AI generation is disabled. A new import uses one metadata request and one transcript request. Successful imports are stored in Neon and reused, so reopening or reimporting the same video/language does not call Supadata again. Provider authentication, quota, and timeout failures are reported as service failures rather than “no captions.”
+
 ## Project Structure
 
 ```
@@ -99,7 +130,10 @@ src/
 │       ├── TypingInput.tsx     # Hidden typing input
 │       ├── VideoPanel.tsx      # YouTube player
 │       ├── StatsBar.tsx        # WPM/accuracy display
-│       ├── PracticeToolbar.tsx # Mode/density/video selector
+│       ├── VideoLibrary.tsx    # Searchable featured/recent videos
+│       ├── ImportVideoForm.tsx # Shared YouTube import flow
+│       ├── SettingsDialog.tsx  # Saved practice preferences
+│       ├── PracticeToolbar.tsx # Mode, density, speed, layout
 │       └── SelectVideoDialog.tsx
 ├── db/                       # Database layer
 │   ├── schema.ts             # Drizzle schema
@@ -128,20 +162,6 @@ src/
 │   └── session.ts            # Zustand session store
 └── data/fixtures/            # Test fixtures
 ```
-
-## Architecture
-
-Follows the implementation plan in `IMPLEMENTATION.md` with milestones:
-
-- **M1**: Scaffold (Next.js, shadcn, Drizzle, configs)
-- **M2**: Domain & seed (video/track/segment schema, fixtures)
-- **M3**: Typing engine (Type mode, 25 tests)
-- **M4**: Player sync (YouTube + Fake adapters, SegmentPlayer)
-- **M5**: Watch UI (Toolbar, Canvas, Stats, Keyboard shortcuts)
-- **M6**: Import pipeline (URL parse, transcript client, segmentation, rate limit)
-- **M7**: Fill & Write modes (deterministic blanks, first-letter hints)
-- **M8**: Polish (settings persistence, display modes, sounds)
-- **M9**: Verification (E2E, performance, lint)
 
 ## License
 

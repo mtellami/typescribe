@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { db, pool } from './client';
 import { segments, videoTracks, videos } from './schema';
+import { SEED_VIDEOS } from '@/data/seed-videos';
+import { importVideo } from '@/lib/youtube/import-service';
 
 interface FixtureSegment {
   startMs: number;
@@ -95,10 +97,21 @@ function fixtureArg(): string | null {
 async function main() {
   const fixturePath = fixtureArg();
   if (!fixturePath) {
-    console.error(
-      'Usage: pnpm db:seed -- --fixture src/data/fixtures/transcript-sample.json',
-    );
-    process.exitCode = 1;
+    for (const sample of SEED_VIDEOS) {
+      const detail = await importVideo(sample.url, sample.lang);
+      await db
+        .update(videos)
+        .set({ featuredRank: sample.featuredRank })
+        .where(eq(videos.id, detail.video.id));
+      console.log(
+        `featured ${detail.video.title} (${detail.segments.length} caption lines)`,
+      );
+    }
+    // Keep test data available by ID without presenting it as a playable video.
+    await db
+      .update(videos)
+      .set({ featuredRank: null })
+      .where(eq(videos.youtubeId, 'testVideo01'));
     return;
   }
   await seedFixture(parseFixture(fixturePath));

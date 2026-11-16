@@ -2,6 +2,7 @@
 
 import type { RefObject } from 'react';
 import { Loader2, Play } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useSession } from '@/store/session';
 import { cn } from '@/lib/utils';
 
@@ -17,7 +18,6 @@ export function VideoPanel({
   className,
 }: VideoPanelProps) {
   const screen = useSession((state) => state.screen);
-  const video = useSession((state) => state.video);
 
   return (
     <div
@@ -28,29 +28,22 @@ export function VideoPanel({
     >
       <div ref={containerRef} className="absolute inset-0" />
 
+      {(screen === 'ready' || screen === 'paused') && (
+        <Button
+          onClick={onPlay}
+          aria-label={screen === 'paused' ? 'Resume video' : 'Start video'}
+          title={screen === 'paused' ? 'Resume video' : 'Start video'}
+          size="icon"
+          className="absolute top-1/2 left-1/2 size-14 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-lg shadow-black/25 sm:size-16"
+        >
+          <Play className="size-6 fill-current sm:size-7" />
+        </Button>
+      )}
+
       {screen === 'loading' && (
         <div className="bg-card/80 absolute inset-0 flex items-center justify-center">
           <Loader2 className="text-muted-foreground size-8 animate-spin" />
         </div>
-      )}
-
-      {screen === 'ready' && (
-        <div className="from-background/90 text-muted-foreground pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent p-4 text-center text-sm">
-          Press play or start typing
-        </div>
-      )}
-
-      {screen === 'paused' && video && (
-        <button
-          type="button"
-          aria-label="Play"
-          onClick={onPlay}
-          className="bg-background/60 hover:bg-background/40 absolute inset-0 flex items-center justify-center transition"
-        >
-          <span className="bg-primary text-primary-foreground flex size-16 items-center justify-center rounded-full">
-            <Play className="size-7 fill-current" />
-          </span>
-        </button>
       )}
     </div>
   );

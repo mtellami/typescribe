@@ -5,7 +5,14 @@ import type { PlayerAdapter, PlayerEvent, PlayerEventListener } from './types';
 
 const IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
 const READY_TIMEOUT_MS = 10_000;
-const UNPLAYABLE_CODES = new Set([2, 5, 100, 101, 150]);
+const PLAYER_ERRORS: Record<number, string> = {
+  2: 'This video link is invalid. Choose a real YouTube video to practice.',
+  5: 'Your browser could not play this video. Try reloading or choose another video.',
+  100: 'This video is unavailable or private. Choose another video.',
+  101: 'The owner has disabled embedded playback. Choose another video.',
+  150: 'The owner has disabled embedded playback. Choose another video.',
+  153: 'YouTube could not verify this player. Reload the page and try again.',
+};
 
 declare global {
   interface Window {
@@ -25,6 +32,8 @@ function loadIFrameApi(): Promise<void> {
 
   apiPromise = new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
+      apiPromise = null;
+      script.remove();
       reject(new Error('YouTube IFrame API ready timeout.'));
     }, READY_TIMEOUT_MS);
 
@@ -55,24 +64,27 @@ export class YouTubePlayerAdapter implements PlayerAdapter {
   private ready = false;
   private destroyed = false;
   private pendingVideoId: string | null = null;
+  private playerError: Error | null = null;
 
   constructor(private readonly container: HTMLElement) {}
 
   async loadVideo(youtubeId: string): Promise<void> {
     if (this.destroyed) return;
     this.pendingVideoId = youtubeId;
+    this.playerError = null;
 
     try {
       await loadIFrameApi();
       if (this.destroyed) return;
 
-      if (!this.player) {
-        this.player = this.createPlayer();
-        await this.waitForReady();
-      } else if (this.ready) {
-        this.cue(youtubeId);
-      }
+      if (!this.player) this.player = this.createPlayer();
+      if (this.ready) this.cue(youtubeId);
+      else await this.waitForReady();
     } catch (error) {
+      if (!this.ready) {
+        this.player?.destroy?.();
+        this.player = null;
+      }
       this.emitter.emit('error', {
         code: 'ready-timeout',
         message: 'The video player could not be loaded.',
@@ -114,6 +126,7 @@ export class YouTubePlayerAdapter implements PlayerAdapter {
   destroy(): void {
     this.destroyed = true;
     this.player?.destroy?.();
+    this.container.replaceChildren();
     this.player = null;
     this.ready = false;
     this.emitter.clear();
@@ -124,15 +137,23 @@ export class YouTubePlayerAdapter implements PlayerAdapter {
   }
 
   private createPlayer(): any {
-    const player = new window.YT.Player(this.container, {
+    // YouTube replaces its target element. Keep React's host intact so cleanup
+    // and later sessions can safely create a fresh iframe inside it.
+    const initialVideoId = this.pendingVideoId;
+    const target = document.createElement('div');
+    this.container.replaceChildren(target);
+    const player = new window.YT.Player(target, {
+      videoId: initialVideoId,
       height: '100%',
       width: '100%',
       playerVars: {
         enablejsapi: 1,
         disablekb: 1,
+        controls: 0,
+        fs: 0,
+        iv_load_policy: 3,
         cc_load_policy: 0,
         rel: 0,
-        modestbranding: 1,
         playsinline: 1,
         autoplay: 0,
         origin: window.location.origin,
@@ -141,7 +162,9 @@ export class YouTubePlayerAdapter implements PlayerAdapter {
         onReady: () => {
           if (this.destroyed) return;
           this.ready = true;
-          if (this.pendingVideoId) this.cue(this.pendingVideoId);
+          if (this.pendingVideoId && this.pendingVideoId !== initialVideoId) {
+            this.cue(this.pendingVideoId);
+          }
           this.emitter.emit('ready');
         },
         onStateChange: (event: any) => {
@@ -151,15 +174,11 @@ export class YouTubePlayerAdapter implements PlayerAdapter {
         },
         onError: (event: any) => {
           if (this.destroyed) return;
-          console.error('YouTube player error', event.data);
-          if (UNPLAYABLE_CODES.has(event.data)) {
-            this.emitter.emit('error', {
-              code: event.data,
-              message: 'This video cannot be played here.',
-            });
-          } else {
-            this.emitter.emit('error', { code: event.data });
-          }
+          const message =
+            PLAYER_ERRORS[event.data] ??
+            'YouTube could not play this video. Try another video.';
+          this.playerError = new Error(message);
+          this.emitter.emit('error', { code: event.data, message });
         },
       },
     });
@@ -167,15 +186,29 @@ export class YouTubePlayerAdapter implements PlayerAdapter {
   }
 
   private waitForReady(): Promise<void> {
+    if (this.playerError) return Promise.reject(this.playerError);
     if (this.ready) return Promise.resolve();
     return new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
+      const cleanup = () => {
+        clearTimeout(timeout);
         unsubscribeReady();
-        reject(new Error('YouTube player ready timeout.'));
+        unsubscribeError();
+      };
+      const timeout = setTimeout(() => {
+        cleanup();
+        // Allow retry after a failed initialization.
+        this.player?.destroy?.();
+        this.player = null;
+        this.ready = false;
+        reject(new Error('YouTube player ready timeout. Please retry.'));
       }, READY_TIMEOUT_MS);
       const unsubscribeReady = this.emitter.on('ready', () => {
-        clearTimeout(timeout);
+        cleanup();
         resolve();
+      });
+      const unsubscribeError = this.emitter.on('error', () => {
+        cleanup();
+        reject(this.playerError ?? new Error('The video could not be loaded.'));
       });
     });
   }

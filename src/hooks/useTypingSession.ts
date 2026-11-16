@@ -89,8 +89,10 @@ export function useTypingSession(
     store.recordSegmentStats(index, statsFromSnapshot(snapshot));
     playCompletionSound();
     if (index < store.segments.length - 1) {
-      goToSegment(index + 1, store.autoReplay === 'on');
+      goToSegment(index + 1, true);
+      focusInput();
     } else {
+      playerRef.current.pause();
       store.completeSession();
     }
   }

@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
+const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
 const practiceFont = Be_Vietnam_Pro({
   subsets: ['latin'],
-  variable: '--font-practice',
+  variable: '--font-vietnam',
   weight: ['400', '500', '600', '700'],
 });
 

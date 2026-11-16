@@ -16,7 +16,7 @@ function statusClass(status: CharStatus): string {
     case 'incorrect':
       return 'text-error underline decoration-wavy decoration-error';
     case 'current':
-      return 'border-b-2 border-cursor motion-safe:animate-pulse';
+      return 'text-foreground relative before:absolute before:-left-0.5 before:top-[0.12em] before:h-[1.15em] before:w-0.5 before:rounded-full before:bg-primary';
     case 'auto':
       return 'text-pending/60';
     default:
@@ -31,37 +31,45 @@ export function TypingCanvas({
 }: TypingCanvasProps) {
   return (
     <div
-      role="presentation"
-      onClick={onFocusInput}
+      role="button"
+      aria-label="Focus typing area"
+      aria-disabled={disabled}
+      tabIndex={disabled ? -1 : 0}
+      onKeyDown={(event) => {
+        if (!disabled && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          onFocusInput();
+        }
+      }}
+      onClick={() => {
+        if (!disabled) onFocusInput();
+      }}
       className={cn(
-        'border-border bg-card min-h-48 w-full cursor-text rounded-lg border p-6',
+        'focus-visible:ring-ring/40 practice-canvas flex min-h-0 w-full cursor-text items-center justify-center rounded-lg px-2 py-2 outline-none focus-visible:ring-1 sm:px-8',
         disabled && 'cursor-default opacity-60',
       )}
     >
       {snapshot ? (
         <p
           dir="auto"
-          className="font-practice text-lg leading-[1.7] tracking-wide lg:text-2xl"
+          className="font-practice max-w-4xl text-center text-[clamp(1rem,min(2.4vw,4dvh),2rem)] leading-[1.8] tracking-[0.015em] [overflow-wrap:anywhere]"
         >
           {snapshot.words.map((word, wordIndex) => (
-            <span
-              key={word.index}
-              className={cn(
-                'mr-3 inline-block rounded px-0.5',
-                wordIndex === snapshot.activeWordIndex && 'bg-primary/10',
-              )}
-            >
+            <span key={word.index} className="inline">
               {word.chars.map((char, charIndex) => (
                 <span
                   key={`${word.index}-${charIndex}`}
-                  className={cn(
-                    'inline-block',
-                    statusClass(snapshot.charStates[wordIndex][charIndex]),
+                  className={statusClass(
+                    snapshot.charStates[wordIndex][charIndex] === 'current' &&
+                      wordIndex !== snapshot.activeWordIndex
+                      ? 'pending'
+                      : snapshot.charStates[wordIndex][charIndex],
                   )}
                 >
                   {char}
                 </span>
               ))}
+              {wordIndex < snapshot.words.length - 1 ? ' ' : null}
             </span>
           ))}
         </p>

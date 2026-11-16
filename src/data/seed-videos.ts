@@ -1,6 +1,6 @@
 export const SEED_VIDEOS = [
   {
-    url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+    url: 'https://www.youtube.com/watch?v=RcGyVTAoXEU',
     lang: 'en',
     featuredRank: 1,
   },

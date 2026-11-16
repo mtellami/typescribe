@@ -16,8 +16,6 @@ export type DisplayMode = 'default' | 'textFocus' | 'expandVideo';
 
 export type PlaybackRate = '0.5' | '0.75' | '1' | '1.25' | '1.5' | '2';
 
-export type AutoReplay = 'off' | 'on';
-
 export interface SegmentStats {
   correctKeystrokes: number;
   keystrokes: number;
@@ -42,7 +40,6 @@ interface SessionState {
   ignorePunctuation: boolean;
   displayMode: DisplayMode;
   playbackRate: PlaybackRate;
-  autoReplay: AutoReplay;
   segmentStats: Record<number, SegmentStats>;
   sessionStartedAt: number | null;
   sessionCompletedAt: number | null;
@@ -63,7 +60,6 @@ interface SessionState {
   setIgnorePunctuation: (value: boolean) => void;
   setDisplayMode: (mode: DisplayMode) => void;
   setPlaybackRate: (rate: PlaybackRate) => void;
-  setAutoReplay: (mode: AutoReplay) => void;
   setSelectOpen: (open: boolean) => void;
   startSession: () => void;
   recordSegmentStats: (index: number, stats: SegmentStats) => void;
@@ -77,6 +73,8 @@ const SETTINGS_KEYS = [
   'ignoreCase',
   'ignorePunctuation',
   'displayMode',
+  'playbackRate',
+  'recentVideos',
 ] as const;
 
 export const useSession = create<SessionState>()(
@@ -98,7 +96,6 @@ export const useSession = create<SessionState>()(
       ignorePunctuation: false,
       displayMode: 'default',
       playbackRate: '1',
-      autoReplay: 'off',
       segmentStats: {},
       sessionStartedAt: null,
       sessionCompletedAt: null,
@@ -186,7 +183,6 @@ export const useSession = create<SessionState>()(
         })),
       setDisplayMode: (mode) => set({ displayMode: mode }),
       setPlaybackRate: (rate: PlaybackRate) => set({ playbackRate: rate }),
-      setAutoReplay: (mode: AutoReplay) => set({ autoReplay: mode }),
       setSelectOpen: (open: boolean) => set({ selectOpen: open }),
       addRecentVideo: (video) =>
         set((state) => ({

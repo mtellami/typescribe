@@ -27,7 +27,7 @@ export function TypingInput({
       inputMode="text"
       tabIndex={-1}
       disabled={disabled}
-      className="pointer-events-none absolute h-px w-px opacity-0"
+      className="pointer-events-none fixed top-0 left-0 h-px w-px opacity-0"
       onKeyDown={onKeyDown}
       onCompositionEnd={onCompositionEnd}
     />

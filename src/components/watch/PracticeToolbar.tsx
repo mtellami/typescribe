@@ -1,5 +1,6 @@
 'use client';
 
+import { RotateCcw, Settings2, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -8,141 +9,152 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useSession } from '@/store/session';
+import {
+  useSession,
+  type DisplayMode,
+  type PlaybackRate,
+} from '@/store/session';
 import type { PracticeMode } from '@/lib/contracts';
 import type { Density } from '@/lib/typing/types';
 
-const MODE_LABELS: Record<PracticeMode, string> = {
-  type: 'Type',
-  fill: 'Fill',
-  write: 'Write',
-};
-
-const DENSITY_LABELS: Record<Density, string> = {
+const MODES = { type: 'Type', fill: 'Fill blanks', write: 'Listen & write' };
+const DENSITIES = {
   all: '100%',
   moderate: '~55%',
   light: '~35%',
   firstLetters: 'First letters',
 };
-
-const PLAYBACK_RATES = ['0.5', '0.75', '1', '1.25', '1.5', '2'] as const;
-type PlaybackRate = (typeof PLAYBACK_RATES)[number];
-
-type AutoReplayOption = 'off' | 'on';
+const LAYOUTS = {
+  default: 'Video + typing',
+  textFocus: 'Typing focus',
+  expandVideo: 'Video focus',
+};
 
 interface PracticeToolbarProps {
   onSelectVideo: () => void;
-  playbackRate: PlaybackRate;
-  setPlaybackRate: (rate: PlaybackRate) => void;
-  autoReplay: AutoReplayOption;
-  setAutoReplay: (mode: AutoReplayOption) => void;
+  onRestart: () => void;
+  onSettings: () => void;
+  disabled: boolean;
 }
 
 export function PracticeToolbar({
   onSelectVideo,
-  playbackRate,
-  setPlaybackRate,
-  autoReplay,
-  setAutoReplay,
+  onRestart,
+  onSettings,
+  disabled,
 }: PracticeToolbarProps) {
   const mode = useSession((state) => state.mode);
   const density = useSession((state) => state.density);
   const displayMode = useSession((state) => state.displayMode);
-  const setMode = useSession((state) => state.setMode);
-  const setDensity = useSession((state) => state.setDensity);
-  const setDisplayMode = useSession((state) => state.setDisplayMode);
-
-  const isExpandVideo = displayMode === 'expandVideo';
-
-  const cycleDisplayMode = () => {
-    if (displayMode === 'default') {
-      setDisplayMode('textFocus');
-    } else if (displayMode === 'textFocus') {
-      setDisplayMode('expandVideo');
-    } else {
-      setDisplayMode('default');
-    }
-  };
-
-  const displayModeLabel = {
-    default: 'Default layout',
-    textFocus: 'Focus typing',
-    expandVideo: 'Expand video',
-  }[displayMode];
-
+  const playbackRate = useSession((state) => state.playbackRate);
+  const loading = useSession((state) => state.screen) === 'loading';
+  const store = useSession.getState();
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button variant="secondary" onClick={onSelectVideo}>
-        Select video
+    <div
+      className="bg-card/95 mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-1.5 rounded-2xl border p-1.5 shadow-lg shadow-black/10 backdrop-blur-xl"
+      role="toolbar"
+      aria-label="Practice options"
+    >
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={onRestart}
+        disabled={disabled}
+        aria-label="Restart"
+        title="Restart session"
+      >
+        <RotateCcw className="size-4" />
       </Button>
-
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onSelectVideo}
+        className="h-9 gap-2"
+        disabled={loading}
+      >
+        <Video className="text-primary size-4" /> Select video
+      </Button>
+      <span className="bg-border mx-0.5 hidden h-5 w-px sm:block" />
       <Select
         value={mode}
-        onValueChange={(value) => setMode(value as PracticeMode)}
+        onValueChange={(value) => store.setMode(value as PracticeMode)}
       >
-        <SelectTrigger className="w-32" aria-label="Practice mode">
+        <SelectTrigger
+          className="h-9 w-32 border-transparent bg-transparent shadow-none"
+          aria-label="Practice mode"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {(Object.keys(MODE_LABELS) as PracticeMode[]).map((value) => (
+          {Object.entries(MODES).map(([value, label]) => (
             <SelectItem key={value} value={value}>
-              {MODE_LABELS[value]}
+              {label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-
       <Select
         value={density}
-        onValueChange={(value) => setDensity(value as Density)}
+        onValueChange={(value) => store.setDensity(value as Density)}
       >
-        <SelectTrigger className="w-36" aria-label="Words to type">
+        <SelectTrigger
+          className="h-9 w-28 border-transparent bg-transparent shadow-none"
+          aria-label="Words to type"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {(Object.keys(DENSITY_LABELS) as Density[]).map((value) => (
+          {Object.entries(DENSITIES).map(([value, label]) => (
             <SelectItem key={value} value={value}>
-              {DENSITY_LABELS[value]}
+              {label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-
       <Select
         value={playbackRate}
-        onValueChange={(value) => setPlaybackRate(value as PlaybackRate)}
+        onValueChange={(value) => store.setPlaybackRate(value as PlaybackRate)}
       >
-        <SelectTrigger className="w-20" aria-label="Playback speed">
+        <SelectTrigger
+          className="h-9 w-21 border-transparent bg-transparent shadow-none"
+          aria-label="Playback speed"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {PLAYBACK_RATES.map((rate) => (
+          {['0.5', '0.75', '1', '1.25', '1.5', '2'].map((rate) => (
             <SelectItem key={rate} value={rate}>
-              {rate}x
+              {rate}×
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-
       <Select
-        value={autoReplay}
-        onValueChange={(value) => setAutoReplay(value as AutoReplayOption)}
+        value={displayMode}
+        onValueChange={(value) => store.setDisplayMode(value as DisplayMode)}
       >
-        <SelectTrigger className="w-24" aria-label="Auto replay">
+        <SelectTrigger
+          className="h-9 w-40 border-transparent bg-transparent shadow-none"
+          aria-label="Display mode"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="off">Auto-replay: Off</SelectItem>
-          <SelectItem value="on">Auto-replay: On</SelectItem>
+          {Object.entries(LAYOUTS).map(([value, label]) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
-
       <Button
-        variant={isExpandVideo ? 'default' : 'outline'}
-        aria-pressed={isExpandVideo}
-        onClick={cycleDisplayMode}
+        variant="ghost"
+        size="icon-sm"
+        onClick={onSettings}
+        aria-label="Practice settings"
+        title="Practice settings"
       >
-        {displayModeLabel}
+        <Settings2 className="size-4" />
       </Button>
     </div>
   );

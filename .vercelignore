@@ -1,0 +1,9 @@
+.git
+.next
+.next-build
+.next-preview
+node_modules
+.playwright-mcp
+.env*
+coverage
+*.tsbuildinfo
