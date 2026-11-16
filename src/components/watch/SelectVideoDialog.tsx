@@ -21,6 +21,7 @@ export function SelectVideoDialog({ onSelect }: SelectVideoDialogProps) {
   const open = useSession((state) => state.selectOpen);
   const setOpen = useSession((state) => state.setSelectOpen);
   const featured = useSession((state) => state.featured);
+  const recent = useSession((state) => state.recentVideos);
   const [url, setUrl] = useState('');
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -55,6 +56,11 @@ export function SelectVideoDialog({ onSelect }: SelectVideoDialogProps) {
     } finally {
       setImporting(false);
     }
+  }
+
+  function handleRecentSelect(videoId: string) {
+    close();
+    onSelect(videoId);
   }
 
   return (
@@ -94,6 +100,13 @@ export function SelectVideoDialog({ onSelect }: SelectVideoDialogProps) {
             {importError && <span className="text-error">{importError}</span>}
           </p>
         </form>
+
+        {recent.length > 0 && (
+          <div className="border-border border-t pt-4">
+            <h3 className="mb-2 text-sm font-medium">Recent</h3>
+            <VideoGrid videos={recent} onSelect={handleRecentSelect} />
+          </div>
+        )}
 
         <div className="border-border border-t pt-4">
           <VideoGrid

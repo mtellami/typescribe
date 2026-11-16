@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useSession, type DisplayMode } from '@/store/session';
+import { useSession } from '@/store/session';
 import type { PracticeMode } from '@/lib/contracts';
 import type { Density } from '@/lib/typing/types';
 
@@ -25,11 +25,26 @@ const DENSITY_LABELS: Record<Density, string> = {
   firstLetters: 'First letters',
 };
 
+const PLAYBACK_RATES = ['0.5', '0.75', '1', '1.25', '1.5', '2'] as const;
+type PlaybackRate = (typeof PLAYBACK_RATES)[number];
+
+type AutoReplayOption = 'off' | 'on';
+
 interface PracticeToolbarProps {
   onSelectVideo: () => void;
+  playbackRate: PlaybackRate;
+  setPlaybackRate: (rate: PlaybackRate) => void;
+  autoReplay: AutoReplayOption;
+  setAutoReplay: (mode: AutoReplayOption) => void;
 }
 
-export function PracticeToolbar({ onSelectVideo }: PracticeToolbarProps) {
+export function PracticeToolbar({
+  onSelectVideo,
+  playbackRate,
+  setPlaybackRate,
+  autoReplay,
+  setAutoReplay,
+}: PracticeToolbarProps) {
   const mode = useSession((state) => state.mode);
   const density = useSession((state) => state.density);
   const displayMode = useSession((state) => state.displayMode);
@@ -37,7 +52,23 @@ export function PracticeToolbar({ onSelectVideo }: PracticeToolbarProps) {
   const setDensity = useSession((state) => state.setDensity);
   const setDisplayMode = useSession((state) => state.setDisplayMode);
 
-  const expandVideo = displayMode === 'expandVideo';
+  const isExpandVideo = displayMode === 'expandVideo';
+
+  const cycleDisplayMode = () => {
+    if (displayMode === 'default') {
+      setDisplayMode('textFocus');
+    } else if (displayMode === 'textFocus') {
+      setDisplayMode('expandVideo');
+    } else {
+      setDisplayMode('default');
+    }
+  };
+
+  const displayModeLabel = {
+    default: 'Default layout',
+    textFocus: 'Focus typing',
+    expandVideo: 'Expand video',
+  }[displayMode];
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -77,16 +108,41 @@ export function PracticeToolbar({ onSelectVideo }: PracticeToolbarProps) {
         </SelectContent>
       </Select>
 
-      <Button
-        variant={expandVideo ? 'default' : 'outline'}
-        aria-pressed={expandVideo}
-        onClick={() =>
-          setDisplayMode(
-            expandVideo ? 'default' : ('expandVideo' as DisplayMode),
-          )
-        }
+      <Select
+        value={playbackRate}
+        onValueChange={(value) => setPlaybackRate(value as PlaybackRate)}
       >
-        {expandVideo ? 'Show typing area' : 'Hide typing area'}
+        <SelectTrigger className="w-20" aria-label="Playback speed">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {PLAYBACK_RATES.map((rate) => (
+            <SelectItem key={rate} value={rate}>
+              {rate}x
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={autoReplay}
+        onValueChange={(value) => setAutoReplay(value as AutoReplayOption)}
+      >
+        <SelectTrigger className="w-24" aria-label="Auto replay">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="off">Auto-replay: Off</SelectItem>
+          <SelectItem value="on">Auto-replay: On</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Button
+        variant={isExpandVideo ? 'default' : 'outline'}
+        aria-pressed={isExpandVideo}
+        onClick={cycleDisplayMode}
+      >
+        {displayModeLabel}
       </Button>
     </div>
   );

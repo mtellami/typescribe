@@ -26,6 +26,10 @@ export default function HomePage() {
   const engineSnapshot = useSession((state) => state.engineSnapshot);
   const featured = useSession((state) => state.featured);
   const displayMode = useSession((state) => state.displayMode);
+  const playbackRate = useSession((state) => state.playbackRate);
+  const setPlaybackRate = useSession((state) => state.setPlaybackRate);
+  const autoReplay = useSession((state) => state.autoReplay);
+  const setAutoReplay = useSession((state) => state.setAutoReplay);
 
   useEffect(() => {
     if (useSession.getState().featuredLoaded) return;
@@ -105,7 +109,14 @@ export default function HomePage() {
   }
 
   const showTypingArea = displayMode !== 'expandVideo';
+  const isTextFocus = displayMode === 'textFocus';
   const typingDisabled = !['ready', 'playing', 'paused'].includes(screen);
+
+  const gridCols = showTypingArea
+    ? isTextFocus
+      ? 'lg:grid-cols-[2fr_3fr]'
+      : 'lg:grid-cols-[3fr_2fr]'
+    : 'grid flex-1 gap-4';
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-4 p-4 lg:p-6">
@@ -116,6 +127,10 @@ export default function HomePage() {
         {screen !== 'idle' && (
           <PracticeToolbar
             onSelectVideo={() => useSession.getState().setSelectOpen(true)}
+            playbackRate={playbackRate}
+            setPlaybackRate={setPlaybackRate}
+            autoReplay={autoReplay}
+            setAutoReplay={setAutoReplay}
           />
         )}
       </header>
@@ -149,13 +164,7 @@ export default function HomePage() {
           <VideoGrid videos={featured} onSelect={loadVideoById} />
         </section>
       ) : (
-        <div
-          className={
-            showTypingArea
-              ? 'grid flex-1 gap-4 lg:grid-cols-[3fr_2fr]'
-              : 'grid flex-1 gap-4'
-          }
-        >
+        <div className={gridCols}>
           <div className="flex flex-col gap-4">
             <VideoPanel containerRef={containerRef} onPlay={handlePlay} />
             {!showTypingArea && screen !== 'completed' && video && <StatsBar />}

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   PracticeMode,
   SegmentDto,
@@ -12,6 +13,10 @@ export type ScreenState =
   'idle' | 'loading' | 'ready' | 'playing' | 'paused' | 'completed' | 'error';
 
 export type DisplayMode = 'default' | 'textFocus' | 'expandVideo';
+
+export type PlaybackRate = '0.5' | '0.75' | '1' | '1.25' | '1.5' | '2';
+
+export type AutoReplay = 'off' | 'on';
 
 export interface SegmentStats {
   correctKeystrokes: number;
@@ -36,10 +41,13 @@ interface SessionState {
   ignoreCase: boolean;
   ignorePunctuation: boolean;
   displayMode: DisplayMode;
+  playbackRate: PlaybackRate;
+  autoReplay: AutoReplay;
   segmentStats: Record<number, SegmentStats>;
   sessionStartedAt: number | null;
   sessionCompletedAt: number | null;
   selectOpen: boolean;
+  recentVideos: VideoDto[];
 
   setScreen: (screen: ScreenState) => void;
   setError: (error: string | null) => void;
@@ -54,121 +62,164 @@ interface SessionState {
   setIgnoreCase: (value: boolean) => void;
   setIgnorePunctuation: (value: boolean) => void;
   setDisplayMode: (mode: DisplayMode) => void;
+  setPlaybackRate: (rate: PlaybackRate) => void;
+  setAutoReplay: (mode: AutoReplay) => void;
   setSelectOpen: (open: boolean) => void;
   startSession: () => void;
   recordSegmentStats: (index: number, stats: SegmentStats) => void;
   completeSession: () => void;
+  addRecentVideo: (video: VideoDto) => void;
 }
 
-export const useSession = create<SessionState>((set, get) => ({
-  screen: 'idle',
-  error: null,
-  featured: [],
-  featuredLoaded: false,
-  video: null,
-  track: null,
-  segments: [],
-  segmentIndex: 0,
-  engineSnapshot: null,
-  engineEpoch: 0,
-  mode: 'type',
-  density: 'all',
-  ignoreCase: false,
-  ignorePunctuation: false,
-  displayMode: 'default',
-  segmentStats: {},
-  sessionStartedAt: null,
-  sessionCompletedAt: null,
-  selectOpen: false,
+const SETTINGS_KEYS = [
+  'mode',
+  'density',
+  'ignoreCase',
+  'ignorePunctuation',
+  'displayMode',
+] as const;
 
-  setScreen: (screen) => set({ screen }),
-  setError: (error) => set({ error }),
-  setFeatured: (videos) => set({ featured: videos, featuredLoaded: true }),
-
-  loadDetail: (detail) =>
-    set((state) => ({
-      video: detail.video,
-      track: detail.track,
-      segments: detail.segments,
-      segmentIndex: 0,
-      engineSnapshot: null,
-      engineEpoch: state.engineEpoch + 1,
-      segmentStats: {},
-      sessionStartedAt: null,
-      sessionCompletedAt: null,
-      error: null,
-    })),
-
-  clearSession: () =>
-    set((state) => ({
+export const useSession = create<SessionState>()(
+  persist(
+    (set, get) => ({
       screen: 'idle',
       error: null,
+      featured: [],
+      featuredLoaded: false,
       video: null,
       track: null,
       segments: [],
       segmentIndex: 0,
       engineSnapshot: null,
-      engineEpoch: state.engineEpoch + 1,
+      engineEpoch: 0,
+      mode: 'type',
+      density: 'all',
+      ignoreCase: false,
+      ignorePunctuation: false,
+      displayMode: 'default',
+      playbackRate: '1',
+      autoReplay: 'off',
       segmentStats: {},
       sessionStartedAt: null,
       sessionCompletedAt: null,
-    })),
+      selectOpen: false,
+      recentVideos: [],
 
-  restartSession: () =>
-    set((state) => ({
-      screen: 'ready',
-      segmentIndex: 0,
-      engineSnapshot: null,
-      engineEpoch: state.engineEpoch + 1,
-      segmentStats: {},
-      sessionStartedAt: null,
-      sessionCompletedAt: null,
-      error: null,
-    })),
+      setScreen: (screen) => set({ screen }),
+      setError: (error) => set({ error }),
+      setFeatured: (videos) => set({ featured: videos, featuredLoaded: true }),
 
-  setSegmentIndex: (index) => set({ segmentIndex: index }),
-  setEngineSnapshot: (snapshot) => set({ engineSnapshot: snapshot }),
-  setMode: (mode) =>
-    set((state) => ({
-      mode,
-      engineEpoch: state.engineEpoch + 1,
-      engineSnapshot: null,
-    })),
-  setDensity: (density) =>
-    set((state) => ({
-      density,
-      engineEpoch: state.engineEpoch + 1,
-      engineSnapshot: null,
-    })),
-  setIgnoreCase: (value) =>
-    set((state) => ({
-      ignoreCase: value,
-      engineEpoch: state.engineEpoch + 1,
-      engineSnapshot: null,
-    })),
-  setIgnorePunctuation: (value) =>
-    set((state) => ({
-      ignorePunctuation: value,
-      engineEpoch: state.engineEpoch + 1,
-      engineSnapshot: null,
-    })),
-  setDisplayMode: (mode) => set({ displayMode: mode }),
-  setSelectOpen: (open) => set({ selectOpen: open }),
+      loadDetail: (detail) =>
+        set((state) => {
+          const video = detail.video;
+          const recent = [
+            video,
+            ...state.recentVideos.filter((v) => v.id !== video.id),
+          ].slice(0, 10);
+          return {
+            video,
+            track: detail.track,
+            segments: detail.segments,
+            segmentIndex: 0,
+            engineSnapshot: null,
+            engineEpoch: state.engineEpoch + 1,
+            segmentStats: {},
+            sessionStartedAt: null,
+            sessionCompletedAt: null,
+            error: null,
+            recentVideos: recent,
+          };
+        }),
 
-  startSession: () => {
-    if (get().sessionStartedAt === null) {
-      set({ sessionStartedAt: Date.now() });
-    }
-  },
+      clearSession: () =>
+        set((state) => ({
+          screen: 'idle',
+          error: null,
+          video: null,
+          track: null,
+          segments: [],
+          segmentIndex: 0,
+          engineSnapshot: null,
+          engineEpoch: state.engineEpoch + 1,
+          segmentStats: {},
+          sessionStartedAt: null,
+          sessionCompletedAt: null,
+        })),
 
-  recordSegmentStats: (index, stats) =>
-    set((state) => ({
-      segmentStats: { ...state.segmentStats, [index]: stats },
-    })),
+      restartSession: () =>
+        set((state) => ({
+          screen: 'ready',
+          segmentIndex: 0,
+          engineSnapshot: null,
+          engineEpoch: state.engineEpoch + 1,
+          segmentStats: {},
+          sessionStartedAt: null,
+          sessionCompletedAt: null,
+          error: null,
+        })),
 
-  completeSession: () =>
-    set({ screen: 'completed', sessionCompletedAt: Date.now() }),
-}));
+      setSegmentIndex: (index) => set({ segmentIndex: index }),
+      setEngineSnapshot: (snapshot) => set({ engineSnapshot: snapshot }),
+      setMode: (mode) =>
+        set((state) => ({
+          mode,
+          engineEpoch: state.engineEpoch + 1,
+          engineSnapshot: null,
+        })),
+      setDensity: (density) =>
+        set((state) => ({
+          density,
+          engineEpoch: state.engineEpoch + 1,
+          engineSnapshot: null,
+        })),
+      setIgnoreCase: (value) =>
+        set((state) => ({
+          ignoreCase: value,
+          engineEpoch: state.engineEpoch + 1,
+          engineSnapshot: null,
+        })),
+      setIgnorePunctuation: (value) =>
+        set((state) => ({
+          ignorePunctuation: value,
+          engineEpoch: state.engineEpoch + 1,
+          engineSnapshot: null,
+        })),
+      setDisplayMode: (mode) => set({ displayMode: mode }),
+      setPlaybackRate: (rate: PlaybackRate) => set({ playbackRate: rate }),
+      setAutoReplay: (mode: AutoReplay) => set({ autoReplay: mode }),
+      setSelectOpen: (open: boolean) => set({ selectOpen: open }),
+      addRecentVideo: (video) =>
+        set((state) => ({
+          recentVideos: [
+            video,
+            ...state.recentVideos.filter((v) => v.id !== video.id),
+          ].slice(0, 10),
+        })),
+
+      startSession: () => {
+        if (get().sessionStartedAt === null) {
+          set({ sessionStartedAt: Date.now() });
+        }
+      },
+
+      recordSegmentStats: (index, stats) =>
+        set((state) => ({
+          segmentStats: { ...state.segmentStats, [index]: stats },
+        })),
+
+      completeSession: () =>
+        set({ screen: 'completed', sessionCompletedAt: Date.now() }),
+    }),
+    {
+      name: 'gloomtype-settings',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) =>
+        Object.fromEntries(
+          SETTINGS_KEYS.map((key) => [key, state[key as keyof typeof state]]),
+        ),
+    },
+  ),
+);
 
 export function sumSegmentStats(
   segmentStats: Record<number, SegmentStats>,

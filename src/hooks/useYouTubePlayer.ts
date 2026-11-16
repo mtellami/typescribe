@@ -17,6 +17,7 @@ export interface PlayerControls {
   play: () => void;
   pause: () => void;
   isAtSegmentEnd: () => boolean;
+  setPlaybackRate: (rate: number) => void;
   onSegmentEnd: (callback: (index: number) => void) => () => void;
   onVisibilityChange: (callback: (visible: boolean) => void) => () => void;
 }
@@ -82,6 +83,9 @@ export function useYouTubePlayer(): UseYouTubePlayerResult {
       segmentPlayerRef.current?.pause();
     },
     isAtSegmentEnd: () => segmentPlayerRef.current?.isAtSegmentEnd() ?? false,
+    setPlaybackRate: (rate) => {
+      adapterRef.current?.setPlaybackRate(rate);
+    },
     onSegmentEnd: (callback) => {
       endCallbackRef.current = callback;
       return () => {

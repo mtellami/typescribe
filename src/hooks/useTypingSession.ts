@@ -9,6 +9,7 @@ import type {
 import { createTypingEngine } from '@/lib/typing/engine';
 import { useSession } from '@/store/session';
 import type { PlayerControls } from './useYouTubePlayer';
+import { playCompletionSound } from '@/lib/sound';
 
 const useIsoLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
@@ -86,8 +87,9 @@ export function useTypingSession(
     const store = useSession.getState();
     const index = store.segmentIndex;
     store.recordSegmentStats(index, statsFromSnapshot(snapshot));
+    playCompletionSound();
     if (index < store.segments.length - 1) {
-      goToSegment(index + 1, true);
+      goToSegment(index + 1, store.autoReplay === 'on');
     } else {
       store.completeSession();
     }
