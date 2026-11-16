@@ -3,18 +3,29 @@
 import type { RefObject } from 'react';
 import { Loader2, Play } from 'lucide-react';
 import { useSession } from '@/store/session';
+import { cn } from '@/lib/utils';
 
 interface VideoPanelProps {
   containerRef: RefObject<HTMLDivElement | null>;
   onPlay: () => void;
+  className?: string;
 }
 
-export function VideoPanel({ containerRef, onPlay }: VideoPanelProps) {
+export function VideoPanel({
+  containerRef,
+  onPlay,
+  className,
+}: VideoPanelProps) {
   const screen = useSession((state) => state.screen);
   const video = useSession((state) => state.video);
 
   return (
-    <div className="border-border bg-card relative aspect-video w-full overflow-hidden rounded-lg border">
+    <div
+      className={cn(
+        'border-border bg-card relative aspect-video w-full overflow-hidden rounded-lg border',
+        className,
+      )}
+    >
       <div ref={containerRef} className="absolute inset-0" />
 
       {screen === 'loading' && (
