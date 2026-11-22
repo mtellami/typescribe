@@ -173,9 +173,7 @@ settings:
 
 importers:
 
-  .: {}
-
-  app:
+  .:
     dependencies:
       '@better-auth/drizzle-adapter':
         specifier: ^1.7.27

@@ -1,128 +1,89 @@
-# Typescribe
+<p align="center">
+  <img src="docs/assets/typescribe-logo-wordmark.png" alt="Typescribe" width="520" />
+</p>
 
-Practice typing with YouTube captions, with live WPM and accuracy tracking. Includes Type, Fill, Write, and Watch modes, video imports, a shared video library, keyboard shortcuts, and saved browser preferences.
+<p align="center">Type along with videos you love.</p>
 
-Typescribe uses Next.js 15, React 19, Tailwind CSS 4, Drizzle ORM, PostgreSQL 17, and [Better Auth](https://better-auth.com/docs/integrations/next) for email/password and Google accounts.
+<p align="center">
+  <a href="https://typescribe-type.vercel.app">Open Typescribe</a> ·
+  <a href="https://github.com/mtellami/typescribe/releases">Releases</a> ·
+  <a href="docs/development.md">Development guide</a>
+</p>
 
-## Run locally with Docker
+Typescribe turns YouTube videos into typing and listening practice. Pick a video,
+follow its captions, and build your rhythm one line at a time.
 
-Install Docker with Compose and Make, then run:
+## Four ways to practice
+
+| Mode      | How it works                                                                                   |
+| --------- | ---------------------------------------------------------------------------------------------- |
+| **Type**  | Type along with visible captions. Practice every word, fewer words, or just the first letters. |
+| **Fill**  | Complete two missing words, then read the next word for context.                               |
+| **Write** | Listen and type the hidden captions, with letter hints when you need them.                     |
+| **Watch** | Follow the full transcript as the video plays. Click a line to jump to it.                     |
+
+## Features
+
+- **Your videos, your practice.** Preview a YouTube link before adding it, or pick a video from Recent and Library.
+- **Feedback as you type.** Track words per minute and accuracy, then review your session summary.
+- **Practice at your pace.** Adjust playback speed, replay a caption, and switch between video and text layouts.
+- **Make it comfortable.** Choose a practice font, use a custom Google Font, and customize key and error sounds.
+- **Accounts when you need them.** Practice publicly, or sign in with Google or email to import videos and access Library and Settings.
+- **Preferences that stick.** Font, layout, sounds, and typing preferences are saved on your device.
+
+## Get started
+
+1. [Open Typescribe](https://typescribe-type.vercel.app) and browse the video library.
+2. Choose a video, or sign in and paste a captioned YouTube link into **Select video**.
+3. Pick a practice mode and start typing or listening.
+
+### Keyboard shortcuts
+
+| Shortcut        | Action                                          |
+| --------------- | ----------------------------------------------- |
+| `Tab`           | Replay the current caption                      |
+| `Shift` + `Tab` | Go to the previous caption                      |
+| `Enter`         | Go to the next caption                          |
+| `Ctrl` + `H`    | Reveal the next letter                          |
+| `Backspace`     | Correct your input, including the previous word |
+
+Shortcuts apply while the typing input is focused. Fill and Write also have a
+**Hint** button.
+
+## Run locally
+
+With Docker Compose and Make installed:
 
 ```sh
+git clone https://github.com/mtellami/typescribe.git
+cd typescribe
 make up
 ```
 
-Open http://localhost:3000. This creates a local `.env` with a random authentication secret, starts PostgreSQL, installs dependencies in the app image, applies migrations, and starts Next.js with hot reload. The database persists in a Docker volume. Signup is available at `/signup`; no email provider is needed.
+Open [localhost:3000](http://localhost:3000). This starts the app with hot reload
+and PostgreSQL, applies database migrations, and creates `infra/.env` on first
+run. Configure a Supadata API key there to import new videos. Google sign-in is
+optional and needs your own OAuth credentials.
 
-```sh
-make logs       # Follow logs
-make down       # Stop containers and keep database data
-make up         # Rebuild after dependency or configuration changes
-```
+Use `make logs` to follow logs and `make down` to stop the app while preserving
+the database.
 
-The library starts empty. Import a captioned YouTube video after signing in, or seed the database:
+See the [development guide](docs/development.md) for host setup, authentication,
+environment variables, testing, and deployment.
 
-```sh
-docker compose exec app pnpm db:seed
-```
-
-Seeding real videos requires internet access. `docker compose exec app pnpm db:seed --fixture src/data/fixtures/transcript-sample.json` loads synthetic captions for tests; its placeholder video cannot play on YouTube.
-
-If ports 3000 or 5432 are occupied, edit `APP_PORT` / `POSTGRES_PORT` in the root `.env`. Set `BETTER_AUTH_URL` to match the browser URL, including the app port.
-
-## Develop on the host
-
-Install Node.js 24+, pnpm 12.21.0, Docker Compose, and Make:
-
-```sh
-make init
-make install
-make db-up
-make migrate
-make dev
-```
-
-The Makefile reads the root `.env` and configures the local PostgreSQL URL. `make dev` runs Next.js on the host; stop a containerized app before using the same port.
-
-Direct `pnpm dev`, `pnpm db:migrate`, and other root scripts delegate to the workspace app. For direct pnpm commands, copy `app/.env.example` to `app/.env.local` and configure the database URL and authentication secret there. Existing local environment files have been moved into `app/`; their database credentials are preserved.
-
-```sh
-make check         # ESLint + TypeScript
-make test          # Vitest, including database integration tests (migrate first)
-make build         # Production build
-make seed          # Seed real videos from the host
-make seed-fixture  # Seed synthetic captions
-make db-generate   # Generate a migration after schema changes
-make db-studio     # Browse local database
-make help          # All targets
-```
-
-## Accounts
-
-The video picker previews valid YouTube links before importing. Click **Add this video** to fetch captions and open practice. Empty or unavailable links show **Recent** and **Library** tabs, with Recent selected by default. Library includes both curated and imported videos.
-
-- Email/password and optional Google signup/login, plus logout, with persistent database sessions.
-- `/library` and `/settings` require a valid server-checked session. Settings includes profile/password changes and practice preferences; `/account` redirects to `/settings`. Video selections open shareable `/?video=…` practice links.
-- Password changes require the current password and revoke other sessions.
-- Video browsing and practice are public. Video imports require authentication and are rate limited per user. Imported videos remain shared.
-- Better Auth handles password hashing, cookies, origin checks, and authentication rate limits. Passwords must be 8–128 characters.
-
-This initial setup does not include an admin panel, email verification, or password recovery. Those require additional configuration, including an email delivery service for email flows.
-
-## Google sign-in
-
-1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), configure the OAuth consent screen and create an OAuth client ID with application type **Web application**. If the consent screen is in testing mode, add your Google account as a test user.
-2. Add an authorized redirect URI: `http://localhost:3000/api/auth/callback/google`. For production, also add `https://your-domain.com/api/auth/callback/google`. The scheme, host, and port must match `BETTER_AUTH_URL` exactly.
-3. Add the credentials to the root `.env` for Compose / Make, or `app/.env.local` for direct pnpm development:
-
-   ```env
-   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=your-client-secret
-   ```
-
-4. Run `make up` to recreate the app container with the new variables, or restart the host dev server. Both login and signup pages show **Continue with Google** when both credentials are configured. Configure the same variables in your production hosting environment.
-
-Google-only users manage their password through Google; Typescribe hides its password-change form for those accounts. Existing authentication tables already support Google accounts, so no additional database migration is needed. The client secret stays on the server. See [Better Auth's Google setup guide](https://better-auth.com/docs/authentication/google).
-
-## Structure
+## Project
 
 ```text
-app/
-  src/
-    app/                 Next.js pages and API routes
-    components/          Practice UI and account forms
-    db/                  Video/auth schemas, queries, migrations runner, seed
-    hooks/               Typing session and video playback hooks
-    lib/                 Better Auth, typing engine, YouTube integration
-    store/               Browser practice state and preferences
-    data/                Seed videos and test fixtures
-  drizzle/               Versioned SQL migrations
-  Dockerfile             Local development image
-  .env.example           Host / deployment configuration reference
-  package.json           App dependencies and scripts
-compose.yaml             App + PostgreSQL
-Makefile                 Local development commands
-.env.example             Compose / Make settings reference
-package.json             Workspace command shortcuts
-pnpm-workspace.yaml
-pnpm-lock.yaml
+app/       Application, tests, dependencies, and database migrations
+infra/     Local Docker and environment configuration
+docs/      Development guide and README assets
 ```
 
-## Configuration and deployment
+## Releases
 
-`BETTER_AUTH_SECRET` must be a random secret (generate with `openssl rand -base64 32`); use a separate production value. `BETTER_AUTH_URL` must be the public site origin. Configure `DATABASE_URL` for requests and optionally `DATABASE_URL_UNPOOLED` for migrations. Do not expose credentials through `NEXT_PUBLIC_` variables.
-
-Optional import settings include `IMPORT_RATE_LIMIT_PER_HOUR` (10), `IMPORT_MAX_DURATION_SECONDS` (3600), `TRANSCRIPT_USER_AGENT`, and server-only `SUPADATA_API_KEY`. Cloud imports use Supadata when configured, fetching native captions without AI generation. Existing imported videos are reused. Authentication and import rate limits use process memory, so limits apply per instance.
-
-For Vercel, set the project Root Directory to `app`, configure the environment variables above, and run migrations explicitly before deploying. The app's Vercel configuration remains in `app/vercel.json`. The GitHub repository and Vercel project are named `typescribe`. Production is hosted at https://typescribe-type.vercel.app. Existing database and role names are preserved; existing database URLs continue to work.
-
-```sh
-pnpm --filter @typescribe/app exec dotenv -e .env.neon.local -- tsx src/db/migrate.ts
-pnpm dlx vercel deploy --prod
-```
-
-Apply the new authentication migration to each deployment database before enabling accounts. Builds do not run migrations. The Docker image and Compose file are intended for local development.
+**[v1.0.0](https://github.com/mtellami/typescribe/releases/tag/v1.0.0)** is the
+first official release. See the [changelog](CHANGELOG.md) for release notes.
 
 ## License
 
-MIT
+Application code is available under the [MIT License](LICENSE).

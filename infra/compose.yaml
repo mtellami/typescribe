@@ -19,8 +19,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: app/Dockerfile
+      context: ../app
+      dockerfile: ../infra/Dockerfile
     init: true
     ports:
       - "127.0.0.1:${APP_PORT:-3000}:3000"
@@ -43,9 +43,9 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./app/src:/workspace/app/src
-      - ./app/public:/workspace/app/public
-      - ./app/drizzle:/workspace/app/drizzle
+      - ../app/src:/workspace/app/src
+      - ../app/public:/workspace/app/public
+      - ../app/drizzle:/workspace/app/drizzle
     command: ["sh", "-c", "pnpm db:migrate && pnpm dev --hostname 0.0.0.0"]
 
 volumes:

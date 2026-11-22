@@ -1,8 +1,11 @@
 SHELL := /bin/sh
 .DEFAULT_GOAL := help
 
--include .env
+-include infra/.env
 export
+
+PNPM := pnpm --dir app
+COMPOSE := docker compose --env-file infra/.env -f infra/compose.yaml
 
 APP_PORT ?= 3000
 POSTGRES_PORT ?= 5432
@@ -17,52 +20,52 @@ help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  %-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 init: ## Create local configuration with a random authentication secret
-	@test -f .env || cp .env.example .env
-	@if ! grep -Eq '^BETTER_AUTH_SECRET=.+$$' .env; then \
+	@test -f infra/.env || cp infra/.env.example infra/.env
+	@if ! grep -Eq '^BETTER_AUTH_SECRET=.+$$' infra/.env; then \
 		secret=$$(openssl rand -base64 32) && \
-		sed -i '/^BETTER_AUTH_SECRET=/d' .env && \
-		printf '\nBETTER_AUTH_SECRET=%s\n' "$$secret" >> .env; \
+		sed -i '/^BETTER_AUTH_SECRET=/d' infra/.env && \
+		printf '\nBETTER_AUTH_SECRET=%s\n' "$$secret" >> infra/.env; \
 	fi
 
-install: ## Install workspace dependencies
-	pnpm install --frozen-lockfile
+install: ## Install app dependencies
+	$(PNPM) install --frozen-lockfile
 
 up: init ## Build and start app + PostgreSQL (http://localhost:3000)
-	docker compose up --build -d --wait
+	$(COMPOSE) up --build -d --wait
 
 down: ## Stop containers, preserving database data
-	docker compose down
+	$(COMPOSE) down
 
 logs: ## Follow app and database logs
-	docker compose logs -f
+	$(COMPOSE) logs -f
 
 db-up: init ## Start only PostgreSQL for host development
-	docker compose up -d --wait postgres
+	$(COMPOSE) up -d --wait postgres
 
 dev: ## Start Next.js on the host (run make db-up migrate first)
-	pnpm dev --port $(APP_PORT)
+	$(PNPM) dev --port $(APP_PORT)
 
 migrate: ## Apply migrations to local PostgreSQL from the host
-	pnpm db:migrate
+	$(PNPM) db:migrate
 
 seed: ## Seed real YouTube videos (requires internet)
-	pnpm db:seed
+	$(PNPM) db:seed
 
 seed-fixture: ## Seed synthetic captions for offline testing (no playable video)
-	pnpm db:seed --fixture src/data/fixtures/transcript-sample.json
+	$(PNPM) db:seed --fixture src/data/fixtures/transcript-sample.json
 
 db-generate: ## Generate a Drizzle migration
-	pnpm db:generate
+	$(PNPM) db:generate
 
 db-studio: ## Open Drizzle Studio on the host
-	pnpm db:studio
+	$(PNPM) db:studio
 
 build: ## Build the Next.js app
-	pnpm build
+	$(PNPM) build
 
 check: ## Run lint and TypeScript checks
-	pnpm lint
-	pnpm typecheck
+	$(PNPM) lint
+	$(PNPM) typecheck
 
 test: ## Run unit tests
-	pnpm test
+	$(PNPM) test
