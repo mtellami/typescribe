@@ -1,167 +1,127 @@
-# Gloomtype
+# Typescribe
 
-A typing practice app that uses YouTube video captions. Type along with the video as captions appear line-by-line with WPM/accuracy tracking.
+Practice typing with YouTube captions, with live WPM and accuracy tracking. Includes Type, Fill, Write, and Watch modes, video imports, a shared video library, keyboard shortcuts, and saved browser preferences.
 
-## Features
+Typescribe uses Next.js 15, React 19, Tailwind CSS 4, Drizzle ORM, PostgreSQL 17, and [Better Auth](https://better-auth.com/docs/integrations/next) for email/password and Google accounts.
 
-- **Three practice modes**: Type (type everything), Fill (blank words only), Write (masked listening)
-- **YouTube import**: Paste any public YouTube URL to fetch captions automatically
-- **Real-time stats**: WPM, accuracy, errors, and hints per segment
-- **Keyboard shortcuts**: Tab (replay), Enter (next), Ctrl+H (hint), Shift+Tab (previous)
-- **Multiple densities**: 100%, ~55%, ~35%, First letters
-- **Local database**: PostgreSQL with Drizzle ORM for video/caption storage
+## Run locally with Docker
 
-## Tech Stack
+Install Docker with Compose and Make, then run:
 
-- **Framework**: Next.js 15 (App Router, React 19)
-- **Database**: PostgreSQL + Drizzle ORM
-- **Styling**: Tailwind CSS 4 + shadcn/ui
-- **Testing**: Vitest (unit) + Playwright (E2E)
-- **Package Manager**: pnpm
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 20+
-- pnpm 12+
-- PostgreSQL 17 (Docker recommended)
-
-### Installation
-
-```bash
-# Clone and install dependencies
-git clone <repo-url>
-cd gloomtype
-pnpm install
-
-# Start PostgreSQL
-docker run -d --name gloomtype-pg \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=gloomtype \
-  -p 5432:5432 postgres:17
-
-# Copy environment and configure
-cp .env.example .env.local
-# Edit .env.local with your DATABASE_URL and other settings
-
-# Run migrations and seed
-pnpm db:migrate
-pnpm db:seed
-
-# Start development server
-pnpm dev
+```sh
+make up
 ```
 
-### Environment Variables
+Open http://localhost:3000. This creates a local `.env` with a random authentication secret, starts PostgreSQL, installs dependencies in the app image, applies migrations, and starts Next.js with hot reload. The database persists in a Docker volume. Signup is available at `/signup`; no email provider is needed.
 
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/gloomtype
-IMPORT_RATE_LIMIT_PER_HOUR=10
-IMPORT_MAX_DURATION_SECONDS=3600
-TRANSCRIPT_USER_AGENT=Mozilla/5.0...
-SUPADATA_API_KEY=your-server-only-key
-NEXT_PUBLIC_PLAYER_MODE=youtube  # use 'fake' only for tests
+```sh
+make logs       # Follow logs
+make down       # Stop containers and keep database data
+make up         # Rebuild after dependency or configuration changes
 ```
 
-The default seed imports a real captioned TED video and features it in the library. It needs access to YouTube. For isolated tests, use `pnpm db:seed -- --fixture src/data/fixtures/transcript-sample.json`; that fixture contains synthetic captions and a placeholder video ID, so it cannot play on YouTube.
+The library starts empty. Import a captioned YouTube video after signing in, or seed the database:
 
-## Commands
-
-```bash
-pnpm dev              # Start dev server
-pnpm build            # Production build
-pnpm start            # Start production server
-pnpm lint             # Run ESLint
-pnpm typecheck        # TypeScript check
-pnpm test             # Run Vitest unit tests
-pnpm test:e2e         # Run Playwright E2E tests
-pnpm format           # Format with Prettier
-pnpm db:generate      # Generate Drizzle migrations
-pnpm db:migrate       # Apply migrations
-pnpm db:seed          # Seed database
-pnpm db:studio        # Open Drizzle Studio
+```sh
+docker compose exec app pnpm db:seed
 ```
 
-## Hosting on Vercel with Neon
+Seeding real videos requires internet access. `docker compose exec app pnpm db:seed --fixture src/data/fixtures/transcript-sample.json` loads synthetic captions for tests; its placeholder video cannot play on YouTube.
 
-Gloomtype uses the `gloomtype` database in the existing Neon project. The other project's `neondb` database is separate. Vercel functions run in `cle1` (Ohio), next to Neon, and connect through Neon's pooled endpoint as the scoped `gloomtype_app` role. Drizzle migrations use a direct connection as the database owner.
+If ports 3000 or 5432 are occupied, edit `APP_PORT` / `POSTGRES_PORT` in the root `.env`. Set `BETTER_AUTH_URL` to match the browser URL, including the app port.
 
-Credentials stay outside Git:
+## Develop on the host
 
-- `.env.local`: local development and test database.
-- `.env.neon.local`: pooled `DATABASE_URL` and direct `DATABASE_URL_UNPOOLED` for the Gloomtype Neon database.
-- Vercel production environment: the scoped, pooled `DATABASE_URL` as a secret, plus player and import settings. The database-owner URL is kept local.
+Install Node.js 24+, pnpm 12.21.0, Docker Compose, and Make:
 
-Run migrations before deploying a schema change:
+```sh
+make init
+make install
+make db-up
+make migrate
+make dev
+```
 
-```bash
-pnpm exec dotenv -e .env.neon.local -- tsx src/db/migrate.ts
+The Makefile reads the root `.env` and configures the local PostgreSQL URL. `make dev` runs Next.js on the host; stop a containerized app before using the same port.
+
+Direct `pnpm dev`, `pnpm db:migrate`, and other root scripts delegate to the workspace app. For direct pnpm commands, copy `app/.env.example` to `app/.env.local` and configure the database URL and authentication secret there. Existing local environment files have been moved into `app/`; their database credentials are preserved.
+
+```sh
+make check         # ESLint + TypeScript
+make test          # Vitest, including database integration tests (migrate first)
+make build         # Production build
+make seed          # Seed real videos from the host
+make seed-fixture  # Seed synthetic captions
+make db-generate   # Generate a migration after schema changes
+make db-studio     # Browse local database
+make help          # All targets
+```
+
+## Accounts
+
+The video picker previews valid YouTube links before importing. Click **Add this video** to fetch captions and open practice. Empty or unavailable links show **Recent** and **Library** tabs, with Recent selected by default. Library includes both curated and imported videos.
+
+- Email/password and optional Google signup/login, plus logout, with persistent database sessions.
+- `/library` and `/settings` require a valid server-checked session. Settings includes profile/password changes and practice preferences; `/account` redirects to `/settings`. Video selections open shareable `/?video=…` practice links.
+- Password changes require the current password and revoke other sessions.
+- Video browsing and practice are public. Video imports require authentication and are rate limited per user. Imported videos remain shared.
+- Better Auth handles password hashing, cookies, origin checks, and authentication rate limits. Passwords must be 8–128 characters.
+
+This initial setup does not include an admin panel, email verification, or password recovery. Those require additional configuration, including an email delivery service for email flows.
+
+## Google sign-in
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), configure the OAuth consent screen and create an OAuth client ID with application type **Web application**. If the consent screen is in testing mode, add your Google account as a test user.
+2. Add an authorized redirect URI: `http://localhost:3000/api/auth/callback/google`. For production, also add `https://your-domain.com/api/auth/callback/google`. The scheme, host, and port must match `BETTER_AUTH_URL` exactly.
+3. Add the credentials to the root `.env` for Compose / Make, or `app/.env.local` for direct pnpm development:
+
+   ```env
+   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   ```
+
+4. Run `make up` to recreate the app container with the new variables, or restart the host dev server. Both login and signup pages show **Continue with Google** when both credentials are configured. Configure the same variables in your production hosting environment.
+
+Google-only users manage their password through Google; Typescribe hides its password-change form for those accounts. Existing authentication tables already support Google accounts, so no additional database migration is needed. The client secret stays on the server. See [Better Auth's Google setup guide](https://better-auth.com/docs/authentication/google).
+
+## Structure
+
+```text
+app/
+  src/
+    app/                 Next.js pages and API routes
+    components/          Practice UI and account forms
+    db/                  Video/auth schemas, queries, migrations runner, seed
+    hooks/               Typing session and video playback hooks
+    lib/                 Better Auth, typing engine, YouTube integration
+    store/               Browser practice state and preferences
+    data/                Seed videos and test fixtures
+  drizzle/               Versioned SQL migrations
+  Dockerfile             Local development image
+  .env.example           Host / deployment configuration reference
+  package.json           App dependencies and scripts
+compose.yaml             App + PostgreSQL
+Makefile                 Local development commands
+.env.example             Compose / Make settings reference
+package.json             Workspace command shortcuts
+pnpm-workspace.yaml
+pnpm-lock.yaml
+```
+
+## Configuration and deployment
+
+`BETTER_AUTH_SECRET` must be a random secret (generate with `openssl rand -base64 32`); use a separate production value. `BETTER_AUTH_URL` must be the public site origin. Configure `DATABASE_URL` for requests and optionally `DATABASE_URL_UNPOOLED` for migrations. Do not expose credentials through `NEXT_PUBLIC_` variables.
+
+Optional import settings include `IMPORT_RATE_LIMIT_PER_HOUR` (10), `IMPORT_MAX_DURATION_SECONDS` (3600), `TRANSCRIPT_USER_AGENT`, and server-only `SUPADATA_API_KEY`. Cloud imports use Supadata when configured, fetching native captions without AI generation. Existing imported videos are reused. Authentication and import rate limits use process memory, so limits apply per instance.
+
+For Vercel, set the project Root Directory to `app`, configure the environment variables above, and run migrations explicitly before deploying. The app's Vercel configuration remains in `app/vercel.json`. The GitHub repository and Vercel project are named `typescribe`. Production is hosted at https://typescribe-type.vercel.app. Existing database and role names are preserved; existing database URLs continue to work.
+
+```sh
+pnpm --filter @typescribe/app exec dotenv -e .env.neon.local -- tsx src/db/migrate.ts
 pnpm dlx vercel deploy --prod
 ```
 
-To seed a new database, run:
-
-```bash
-pnpm exec dotenv -e .env.neon.local -- tsx src/db/seed.ts
-```
-
-The Vercel project is linked through the ignored `.vercel/` directory. On a new checkout, sign in with `pnpm dlx vercel login`, then run `pnpm dlx vercel link`. Configure the production environment before the first deployment. Build artifacts and local environment files are excluded by `.vercelignore`.
-
-Migrations are an explicit step rather than part of the build, so ordinary deployments do not change database structure. The in-memory import rate limit applies per function instance. Cloud imports use Supadata because YouTube blocks direct requests from Vercel. Add `SUPADATA_API_KEY` as a sensitive production environment variable before deploying. Local development uses the same provider when the key is present, and otherwise keeps direct YouTube fetching. The key is never sent to the browser.
-
-Imports fetch metadata first to enforce the video length limit, then request timestamped captions with `mode=native`; AI generation is disabled. A new import uses one metadata request and one transcript request. Successful imports are stored in Neon and reused, so reopening or reimporting the same video/language does not call Supadata again. Provider authentication, quota, and timeout failures are reported as service failures rather than “no captions.”
-
-## Project Structure
-
-```
-src/
-├── app/                    # Next.js App Router pages & API routes
-│   ├── api/
-│   │   ├── videos/featured/    # GET featured videos
-│   │   ├── videos/[id]/        # GET video detail
-│   │   └── videos/import/      # POST import YouTube URL
-│   └── page.tsx                # Main watch page
-├── components/
-│   ├── ui/                   # shadcn/ui components
-│   └── watch/                # Watch page components
-│       ├── TypingCanvas.tsx    # Caption rendering
-│       ├── TypingInput.tsx     # Hidden typing input
-│       ├── VideoPanel.tsx      # YouTube player
-│       ├── StatsBar.tsx        # WPM/accuracy display
-│       ├── VideoLibrary.tsx    # Searchable featured/recent videos
-│       ├── ImportVideoForm.tsx # Shared YouTube import flow
-│       ├── SettingsDialog.tsx  # Saved practice preferences
-│       ├── PracticeToolbar.tsx # Mode, density, speed, layout
-│       └── SelectVideoDialog.tsx
-├── db/                       # Database layer
-│   ├── schema.ts             # Drizzle schema
-│   ├── client.ts             # pg Pool + Drizzle
-│   ├── queries.ts            # Query functions
-│   └── seed.ts               # Seed script
-├── hooks/
-│   ├── useTypingSession.ts   # Typing engine orchestration
-│   └── useYouTubePlayer.ts   # Player adapter
-├── lib/
-│   ├── typing/               # Typing engine (core)
-│   │   ├── engine.ts         # State machine
-│   │   ├── tokenize.ts       # Grapheme segmentation
-│   │   └── prng.ts           # Deterministic PRNG
-│   ├── youtube/              # YouTube integration
-│   │   ├── url.ts            # URL parser
-│   │   ├── transcript-client.ts
-│   │   └── import-service.ts
-│   ├── transcript/
-│   │   └── segment.ts        # Caption normalization + grouping
-│   ├── player/               # Player adapters
-│   ├── contracts.ts          # Zod schemas
-│   ├── errors.ts             # AppError class
-│   └── rate-limit.ts
-├── store/
-│   └── session.ts            # Zustand session store
-└── data/fixtures/            # Test fixtures
-```
+Apply the new authentication migration to each deployment database before enabling accounts. Builds do not run migrations. The Docker image and Compose file are intended for local development.
 
 ## License
 

@@ -1,0 +1,21 @@
+{
+  "video": {
+    "youtubeId": "testVideo01",
+    "title": "Fixture Video",
+    "channel": "Typescribe Tests",
+    "thumbnail": null,
+    "durationSeconds": 12,
+    "sourceLang": "en",
+    "featuredRank": 1
+  },
+  "track": {
+    "lang": "en",
+    "kind": "manual",
+    "label": "English"
+  },
+  "segments": [
+    { "startMs": 0, "endMs": 3000, "text": "The quick brown fox jumps." },
+    { "startMs": 3000, "endMs": 6000, "text": "Pack my box with five dozen." },
+    { "startMs": 6000, "endMs": 9000, "text": "Sphinx of black quartz, judge." }
+  ]
+}

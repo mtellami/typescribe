@@ -1,0 +1,52 @@
+name: typescribe
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: typescribe
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d typescribe"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    init: true
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/typescribe
+      DATABASE_URL_UNPOOLED: postgres://postgres:postgres@postgres:5432/typescribe
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Run make init first}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      SUPADATA_API_KEY: ${SUPADATA_API_KEY:-}
+      WATCHPACK_POLLING: "true"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/auth/ok').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 20
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./app/src:/workspace/app/src
+      - ./app/public:/workspace/app/public
+      - ./app/drizzle:/workspace/app/drizzle
+    command: ["sh", "-c", "pnpm db:migrate && pnpm dev --hostname 0.0.0.0"]
+
+volumes:
+  postgres_data:

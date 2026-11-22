@@ -1,9 +1,9 @@
 .git
-.next
-.next-build
-.next-preview
-node_modules
+**/node_modules
+**/.next*
+**/.env*
+**/.vercel
 .playwright-mcp
-.env*
-coverage
-*.tsbuildinfo
+**/coverage
+**/*.tsbuildinfo
+*.html

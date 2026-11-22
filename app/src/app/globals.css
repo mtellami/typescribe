@@ -1,0 +1,388 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-geist);
+  --font-sans: var(--font-geist);
+  --font-practice: var(--font-vietnam);
+  --color-correct: var(--correct);
+  --color-error: var(--error);
+  --color-pending: var(--pending);
+  --color-cursor: var(--cursor);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #0f1115;
+  --foreground: #e6eaf2;
+  --card: #151921;
+  --card-foreground: #e6eaf2;
+  --popover: #151921;
+  --popover-foreground: #e6eaf2;
+  --primary: #4ecdc4;
+  --primary-foreground: #0f1115;
+  --secondary: #151921;
+  --secondary-foreground: #e6eaf2;
+  --muted: #151921;
+  --muted-foreground: #8592a8;
+  --accent: #151921;
+  --accent-foreground: #e6eaf2;
+  --destructive: #ff6f61;
+  --border: #232a36;
+  --input: #232a36;
+  --ring: #4ecdc4;
+  --correct: #4ecdc4;
+  --error: #ff6f61;
+  --pending: #8592a8;
+  --cursor: #ffffff;
+  --chart-1: #4ecdc4;
+  --chart-2: #8592a8;
+  --chart-3: #ff6f61;
+  --chart-4: #e6eaf2;
+  --chart-5: #232a36;
+  --radius: 0.625rem;
+  --sidebar: #151921;
+  --sidebar-foreground: #e6eaf2;
+  --sidebar-primary: #4ecdc4;
+  --sidebar-primary-foreground: #0f1115;
+  --sidebar-accent: #151921;
+  --sidebar-accent-foreground: #e6eaf2;
+  --sidebar-border: #232a36;
+  --sidebar-ring: #4ecdc4;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background-image: radial-gradient(
+      ellipse at 20% 0%,
+      #4ecdc405,
+      transparent 55%
+    );
+  }
+  button:not(:disabled),
+  [role='tab'] {
+    cursor: pointer;
+  }
+  button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 4px;
+  }
+  kbd {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+  [hidden] {
+    display: none !important;
+  }
+}
+
+/* Practice uses the available viewport; the library keeps its natural flow. */
+.practice-shell {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.practice-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  padding-block: clamp(6px, 1.3dvh, 14px);
+}
+
+.practice-workspace {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 3fr) auto minmax(0, 1.5fr) auto;
+  gap: clamp(4px, 1.3dvh, 12px);
+}
+
+.practice-workspace[data-layout='textFocus'] {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.practice-workspace[data-layout='expandVideo'] {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+
+.practice-video-stage {
+  container-type: size;
+  display: flex;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.practice-video-frame {
+  width: min(100cqw, calc(100cqh * 16 / 9));
+  height: auto;
+}
+
+.practice-typing {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.practice-canvas {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  align-items: safe center;
+}
+
+.practice-canvas > p {
+  margin-block: auto;
+}
+
+@media (max-height: 700px) {
+  .practice-hint {
+    display: none;
+  }
+}
+
+@media (max-height: 500px) {
+  .practice-title {
+    height: 0;
+    visibility: hidden;
+  }
+
+  .practice-shell > header {
+    height: 44px;
+  }
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.home-shell {
+  height: 100dvh;
+  min-height: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.home-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding-block: clamp(8px, 2.5dvh, 24px);
+}
+
+.home-intro {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(16px, 4dvh, 40px);
+}
+
+.home-hero {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  gap: clamp(16px, 3dvh, 32px);
+}
+
+.home-copy {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 2dvh, 20px);
+}
+
+.home-footer {
+  padding-block: 12px;
+}
+
+@media (min-width: 900px), (min-width: 700px) and (max-height: 600px) {
+  .home-hero {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: clamp(24px, 5vw, 64px);
+  }
+}
+
+@media (max-height: 740px) {
+  .home-features,
+  .home-import-icon {
+    display: none;
+  }
+
+  .home-intro {
+    gap: 16px;
+  }
+}
+
+@media (max-height: 650px) {
+  .home-steps {
+    display: none;
+  }
+
+  .home-shell > header {
+    height: 56px;
+  }
+
+  .home-footer {
+    padding-block: 8px;
+  }
+}
+
+.home-demo-stage {
+  background:
+    radial-gradient(
+      120% 90% at 20% 110%,
+      color-mix(in srgb, var(--primary) 38%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(160deg, var(--border), var(--background));
+}
+
+@media (max-width: 899px) and (min-height: 601px) {
+  .home-shell {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .home-main {
+    padding-block: 32px;
+  }
+}
+
+.video-picker-dialog {
+  container-type: inline-size;
+  width: min(42rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+}
+
+/* Fit one preview, its URL field, and the Add button; reuse that space for lists. */
+.video-picker-body {
+  height: calc(100cqw * 9 / 16 + 6.75rem);
+  max-height: calc(85dvh - 8rem);
+}
+
+.video-picker-dialog[data-state='open'] {
+  animation: video-picker-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.video-picker-dialog[data-state='closed'] {
+  animation: video-picker-exit 180ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.video-picker-overlay[data-state='open'] {
+  animation: video-picker-backdrop-in 220ms ease-out both;
+}
+
+.video-picker-overlay[data-state='closed'] {
+  animation: video-picker-backdrop-out 180ms ease-in both;
+}
+
+@keyframes video-picker-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes video-picker-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+
+@keyframes video-picker-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes video-picker-backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .video-picker-dialog[data-state],
+  .video-picker-overlay[data-state] {
+    animation: none;
+  }
+}

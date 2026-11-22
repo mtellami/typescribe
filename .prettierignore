@@ -1,7 +1,7 @@
 node_modules
 pnpm-lock.yaml
 drizzle
-.next
+.next*
 coverage
 playwright-report
 test-results
