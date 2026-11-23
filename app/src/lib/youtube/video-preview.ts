@@ -15,7 +15,7 @@ export async function getVideoPreview(
   videoId: string,
   signal: AbortSignal,
 ): Promise<VideoPreview> {
-  const stored = await findVideoByYouTubeId(videoId);
+  const stored = await findVideoByYouTubeId(videoId, 'preview');
   if (stored)
     return {
       youtubeId: stored.youtubeId,

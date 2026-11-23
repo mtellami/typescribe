@@ -50,7 +50,7 @@ describe('importVideo (integration)', () => {
       },
     };
 
-    const first = await importVideo(URL, 'en', { client });
+    const first = await importVideo(URL, 'en', 'test-user', { client });
     expect(fetchCount).toBe(1);
     expect(first.video.youtubeId).toBe(YOUTUBE_ID);
     expect(first.video.title).toBe('Import Test Video');
@@ -63,7 +63,7 @@ describe('importVideo (integration)', () => {
       expect(segment.endMs).toBeGreaterThan(segment.startMs);
     }
 
-    const second = await importVideo(URL, 'en', { client });
+    const second = await importVideo(URL, 'en', 'test-user', { client });
     expect(fetchCount).toBe(1);
     expect(second.video.id).toBe(first.video.id);
     expect(second.track.id).toBe(first.track.id);
@@ -77,13 +77,15 @@ describe('importVideo (integration)', () => {
     expect(row.title).toBe('Import Test Video');
     const { listLibraryVideos } = await import('@/db/queries');
     expect(
-      (await listLibraryVideos()).some((video) => video.id === first.video.id),
+      (await listLibraryVideos('test-user')).some(
+        (video) => video.id === first.video.id,
+      ),
     ).toBe(true);
   });
 
   it('returns the cached video on a fresh call without a client', async () => {
     const { importVideo } = await import('./import-service');
-    const detail = await importVideo(URL, 'en');
+    const detail = await importVideo(URL, 'en', 'test-user');
     expect(detail.video.youtubeId).toBe(YOUTUBE_ID);
     expect(detail.segments.length).toBeGreaterThanOrEqual(3);
   });

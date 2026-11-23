@@ -98,7 +98,7 @@ async function main() {
   const fixturePath = fixtureArg();
   if (!fixturePath) {
     for (const sample of SEED_VIDEOS) {
-      const detail = await importVideo(sample.url, sample.lang);
+      const detail = await importVideo(sample.url, sample.lang, 'seed-featured');
       await db
         .update(videos)
         .set({ featuredRank: sample.featuredRank })

@@ -21,10 +21,11 @@ export const videos = pgTable(
     durationSeconds: integer('duration_seconds').notNull(),
     sourceLang: text('source_lang').notNull(),
     featuredRank: integer('featured_rank'),
+    ownerId: text('owner_id'),
     createdAt: bigint('created_at', { mode: 'number' }).notNull(),
   },
   (t) => [
-    uniqueIndex('videos_youtube_id_uq').on(t.youtubeId),
+    uniqueIndex('videos_owner_youtube_id_uq').on(t.ownerId, t.youtubeId),
     index('videos_featured_rank_idx').on(t.featuredRank),
   ],
 );

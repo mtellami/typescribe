@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getVideoDetail } from '@/db/queries';
+import { auth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -10,7 +11,8 @@ export async function GET(
   try {
     const { id } = await params;
     const lang = new URL(request.url).searchParams.get('lang');
-    const detail = await getVideoDetail(id, lang);
+    const session = await auth.api.getSession({ headers: request.headers });
+    const detail = await getVideoDetail(id, lang, session?.user.id);
     if (!detail) {
       return NextResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Video not found.' } },

@@ -1,4 +1,4 @@
-import { asc, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, or, sql } from 'drizzle-orm';
 import { db } from './client';
 import { segments, videoTracks, videos } from './schema';
 import type {
@@ -79,11 +79,19 @@ export function pickTrack(
 export async function getVideoDetail(
   id: string,
   lang?: string | null,
+  ownerId?: string,
 ): Promise<VideoDetailResponse | null> {
   const [video] = await db
     .select()
     .from(videos)
-    .where(eq(videos.id, id))
+    .where(
+      and(
+        eq(videos.id, id),
+        ownerId
+          ? or(isNotNull(videos.featuredRank), eq(videos.ownerId, ownerId))
+          : isNotNull(videos.featuredRank),
+      ),
+    )
     .limit(1);
   if (!video) return null;
 
@@ -120,21 +128,31 @@ export async function listFeaturedVideos(limit = 20): Promise<VideoDto[]> {
 
 export async function findVideoByYouTubeId(
   youtubeId: string,
+  ownerId: string,
 ): Promise<VideoRow | null> {
   const [row] = await db
     .select()
     .from(videos)
-    .where(eq(videos.youtubeId, youtubeId))
+    .where(
+      and(
+        eq(videos.youtubeId, youtubeId),
+        or(isNotNull(videos.featuredRank), eq(videos.ownerId, ownerId)),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }
 
 export type { VideoRow, TrackRow, SegmentRow };
 
-export async function listLibraryVideos(limit = 100): Promise<VideoDto[]> {
+export async function listLibraryVideos(
+  ownerId: string,
+  limit = 100,
+): Promise<VideoDto[]> {
   const rows = await db
     .select()
     .from(videos)
+    .where(or(isNotNull(videos.featuredRank), eq(videos.ownerId, ownerId)))
     .orderBy(
       sql`${videos.featuredRank} asc nulls last`,
       desc(videos.createdAt),

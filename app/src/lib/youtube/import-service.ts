@@ -24,27 +24,34 @@ export interface ImportOptions {
 async function findByYouTubeIdAndLang(
   youtubeId: string,
   lang: string,
+  ownerId: string,
 ): Promise<VideoDetailResponse | null> {
-  const video = await findVideoByYouTubeId(youtubeId);
+  const video = await findVideoByYouTubeId(youtubeId, ownerId);
   if (!video) return null;
-  return getVideoDetail(video.id, lang);
+  return getVideoDetail(video.id, lang, ownerId);
 }
 
 export async function importVideo(
   url: string,
   lang: string,
+  ownerId: string,
   options: ImportOptions = {},
 ): Promise<VideoDetailResponse> {
   const youtubeId = parseYouTubeUrl(url);
 
-  const existing = await findByYouTubeIdAndLang(youtubeId, lang);
+  const existing = await findByYouTubeIdAndLang(youtubeId, lang, ownerId);
   if (existing) return existing;
 
-  const key = `${youtubeId}:${lang}`;
+  const key = `${ownerId}:${youtubeId}:${lang}`;
   const pending = inFlight.get(key);
   if (pending) return pending;
 
-  const promise = importVideoInternal(youtubeId, lang, options).finally(() => {
+  const promise = importVideoInternal(
+    youtubeId,
+    lang,
+    ownerId,
+    options,
+  ).finally(() => {
     inFlight.delete(key);
   });
   inFlight.set(key, promise);
@@ -54,6 +61,7 @@ export async function importVideo(
 async function importVideoInternal(
   youtubeId: string,
   lang: string,
+  ownerId: string,
   options: ImportOptions,
 ): Promise<VideoDetailResponse> {
   const client: TranscriptClient = {
@@ -76,14 +84,15 @@ async function importVideoInternal(
         thumbnail: result.details.thumbnail,
         durationSeconds: result.details.durationSeconds,
         sourceLang: result.track.lang,
+        ownerId,
         createdAt: Math.floor(Date.now() / 1000),
       })
-      .onConflictDoNothing({ target: videos.youtubeId });
+      .onConflictDoNothing({ target: [videos.ownerId, videos.youtubeId] });
 
     const [video] = await tx
       .select()
       .from(videos)
-      .where(eq(videos.youtubeId, youtubeId))
+      .where(and(eq(videos.youtubeId, youtubeId), eq(videos.ownerId, ownerId)))
       .limit(1);
 
     await tx

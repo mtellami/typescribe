@@ -43,7 +43,9 @@ export async function POST(request: Request) {
     if (!body.success) {
       throw new AppError('INVALID_URL', 400, 'Enter a valid YouTube URL.');
     }
-    return NextResponse.json(await importVideo(body.data.url, body.data.lang));
+    return NextResponse.json(
+      await importVideo(body.data.url, body.data.lang, session.user.id),
+    );
   } catch (error) {
     if (error instanceof AppError) return errorResponse(error);
     return errorResponse(
